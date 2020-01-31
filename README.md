@@ -42,7 +42,7 @@ In this code sample, we implement the [Azure Cosmos DB extension for Cassandra R
 
 5. Run `mvn clean install` from java-examples folder to build the project. This will generate cosmosdb-cassandra-examples.jar under target folder.
  
-6. Run `java -cp target/cosmosdb-cassandra-examples.jar com.azure.cosmosdb.cassandra.examples.UserProfile` in a terminal to start your java application. The Sample should finish with a number of "overloaded" (rate limited) requests, but with all inserts successful after retries. The output will show the number of users present in the table, and the number of user inserts that were attempted. The two numbers should be identical since rate limits have been retried. 
+6. Run `java -cp target/cosmosdb-cassandra-examples.jar com.azure.cosmosdb.cassandra.examples.UserProfile` in a terminal to start your java application. The output will include a number of "overloaded" (rate limited) requests, the number of users present in the table after the load test, and the number of user inserts that were attempted. The two numbers should be identical since rate limits have been succesfully handled and retried.
 
    ![Console output](./media/output.png)
 

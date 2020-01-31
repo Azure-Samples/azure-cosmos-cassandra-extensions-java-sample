@@ -38,12 +38,11 @@ In this code sample, we implement the [Azure Cosmos DB extension for Cassandra R
     ssl_keystore_file_path=<FILLME>
     ssl_keystore_password=<FILLME>
     ```
-    If ssl_keystore_file_path is not given in config.properties, then by default <JAVA_HOME>/jre/lib/security/cacerts will be used
-    If ssl_keystore_password is not given in config.properties, then the default password 'changeit' will be used
+    If ssl_keystore_file_path is not given in config.properties, then by default <JAVA_HOME>/jre/lib/security/cacerts will be used. If ssl_keystore_password is not given in config.properties, then the default password 'changeit' will be used
 
 5. Run `mvn clean install` from java-examples folder to build the project. This will generate cosmosdb-cassandra-examples.jar under target folder.
  
-6. Run `java -cp target/cosmosdb-cassandra-examples.jar com.azure.cosmosdb.cassandra.examples.UserProfile` in a terminal to start your java application. The Sample should finish with a number of rate limited requests, but with all inserts successful after retries:
+6. Run `java -cp target/cosmosdb-cassandra-examples.jar com.azure.cosmosdb.cassandra.examples.UserProfile` in a terminal to start your java application. The Sample should finish with a number of "overloaded" (rate limited) requests, but with all inserts successful after retries. The output will show the number of users present in the table, and the number of user inserts that were attempted. The two numbers should be identical since rate limits have been retried. 
 
    ![Console output](./media/output.png)
 
@@ -57,7 +56,16 @@ You should ensure that you account for [query idempotence](https://docs.datastax
 
 ## Review the code
 
-You can review the following files: `src/main/java/com/azure/cosmosdb/cassandra/util/CassandraUtils.java` and `src/main/java/com/azure/cosmosdb/cassandra/repository/UserRepository.java` to understand how sessions and retry policy is being created. You should also consult the [Azure Cosmos DB extension for Cassandra Retry Policy](https://github.com/Azure/azure-cosmos-cassandra-extensions) if you want to understand how retry policy is implemented.
+You can review the following files: `src/main/java/com/azure/cosmosdb/cassandra/util/CassandraUtils.java` and `src/main/java/com/azure/cosmosdb/cassandra/repository/UserRepository.java` to understand how sessions and retry policy is being created. Please note also that we set also timeout limits:
+
+```java
+        SocketOptions options = new SocketOptions();
+        options.setConnectTimeoutMillis(30000);
+        options.setReadTimeoutMillis(30000);
+
+```
+
+You should also consult the [Azure Cosmos DB extension for Cassandra Retry Policy](https://github.com/Azure/azure-cosmos-cassandra-extensions) if you want to understand how retry policy is implemented.
 
 ## More information
 

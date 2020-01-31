@@ -74,7 +74,7 @@ public class CassandraUtils {
 
         SocketOptions options = new SocketOptions();
         options.setConnectTimeoutMillis(30000);
-        options.setReadTimeoutMillis(300000);
+        options.setReadTimeoutMillis(30000);
         cluster = Cluster.builder().addContactPoints(contactPoints).withPort(port)
                                     .withCredentials(cassandraUsername, cassandraPassword)
                                     .withRetryPolicy(retryPolicy)

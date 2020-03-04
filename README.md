@@ -42,39 +42,65 @@ The retry policy handles errors such as OverLoadedError (which may occur due to 
 
 5. Run `mvn clean install` from java-examples folder to build the project. This will generate cosmosdb-cassandra-examples.jar under target folder.
  
-6. Run `java -cp target/cosmosdb-cassandra-examples.jar com.microsoft.azure.cosmosdb.cassandra.examples.UserProfile` in a terminal to start your java application. The output will include a number of "overloaded" (rate limited) requests, the number of users present in the table after the load test, and the number of user inserts that were attempted. The two numbers should be identical since rate limits have been succesfully handled and retried.
+6. Run `java -cp target/cosmosdb-cassandra-examples.jar com.microsoft.azure.cosmosdb.cassandra.examples.UserProfile` in a terminal to start your java application. The output will include a number of "overloaded" (rate limited) requests, the insert duration times, average latency, the number of users present in the table after the load test, and the number of user inserts that were attempted. Users in table and records attempted should be identical since rate limits have been successfully handled and retried. Notice that although requests are all successful, you may see significant average latency due to requests being retried after rate limiting:
 
    ![Console output](./media/output.png)
 
-If you do not see overloaded errors, you can increase the number of threads in UserProfile.java in order to force rate limiting: 
+    If you do not see overloaded errors, you can increase the number of threads in UserProfile.java in order to force rate limiting: 
 
-```java
-    public static final int NUMBER_OF_THREADS = 30;
-```
+    ```java
+        public static final int NUMBER_OF_THREADS = 40;
+    ```
+
+7. In a real world scenario, you may wish to take steps to increase the provisioned throughput when the system is experiencing rate limiting. Note that you can do this programmatically in the Azure Cosmos DB API for Cassandra by executing [ALTER commends in CQL](https://docs.microsoft.com/azure/cosmos-db/cassandra-support#keyspace-and-table-options). In production, you should handle 429 errors in a similar fashion to this sample, and monitor the system, increasing throughput if 429 errors are being recorded by the system. You can monitor whether requests are exceeding provisioned capacity using Azure portal metrics:
+
+   ![Console output](./media/metrics.png)
+
+    You can try increasing the provisioned RUs in the Cassandra Keyspace or table to see how this will improve latencies. You can consult our article on [elastic scale](https://docs.microsoft.com/en-us/azure/cosmos-db/manage-scale-cassandra) to understand the different methods for provisioning throughput in Cassandra API. 
+
+8. One alternative to increasing RU provisioning for mitigating rate limiting, which might be more useful in scenarios where there is a highly asymmetrical distribution of throughout between regions, is to load balance between regions on the client. The load balancing policy implemented in this sample provides the mechanism to do this by allowing you to select a read or write region:
+
+    ```java
+        CosmosLoadBalancingPolicy loadBalancingPolicy1 = CosmosLoadBalancingPolicy.builder().withGlobalEndpoint(CONTACT_POINTS[0]).build();
+        CosmosLoadBalancingPolicy loadBalancingPolicy2 = CosmosLoadBalancingPolicy.builder().withWriteDC("West US").withReadDC("West US").build();
+    ```
+    To test this out, set the `loadBalanceRegions` variable to true:
+
+    ```java
+    Boolean loadBalanceRegions = true;
+    ```
+    Note: when running this, you should ensure that you have two regions, one in West US (or you can change the above to a region of your choice), and [multi-master writes configured](https://docs.microsoft.com/en-us/azure/cosmos-db/how-to-multi-master). When you run the test again with load balancing configured, you should see requests being written to different regions, with latencies reduced:
+
+    ![Console output](./media/loadbalancingoutput.png)
+
+    Note: when writing data to Cassandra, you should ensure that you account for [query idempotence](https://docs.datastax.com/en/developer/java-driver/3.0/manual/idempotence/), and the relevant rules for [retries](https://docs.datastax.com/en/developer/java-driver/3.0/manual/retries/#retries-and-idempotence). You should perform sufficient load testing to ensure that the implementation meets your requirements.
 
 ## About the code
 The code included in this sample is a load test to simulate a scenario where Cosmos DB will rate limit requests (return a 429 error) because there are too many requests for the [provisioned throughput](https://docs.microsoft.com/azure/cosmos-db/how-to-provision-container-throughput) in the service. In this sample, we create a Keyspace and table, and run a multi-threaded process that will insert users concurrently into the user table. To help generate random data for users, we use a java library called "javafaker", which is included in the build dependencies. The loadTest() will eventually exhaust the provisioned Keyspace RU allocation (default is 400RUs). 
 
-In a real world scenario, you may wish to take steps to increase the provisioned throughput when the system is experiencing rate limiting. Note that you can do this programmatically in the Azure Cosmos DB API for Cassandra by executing [ALTER commends in CQL](https://docs.microsoft.com/azure/cosmos-db/cassandra-support#keyspace-and-table-options). In production, you should handle 429 errors in a similar fashion to this sample, and monitor the system, increasing throughput if 429 errors are being recorded by the system. You can monitor whether requests are exceeding provisioned capacity using Azure portal metrics:
 
-   ![Console output](./media/metrics.png)
-
-Note: when writing data to Cassandra, you should ensure that you account for [query idempotence](https://docs.datastax.com/en/developer/java-driver/3.0/manual/idempotence/), and the relevant rules for [retries](https://docs.datastax.com/en/developer/java-driver/3.0/manual/retries/#retries-and-idempotence). You should perform sufficient load testing to ensure that the implementation meets your requirements.
 
 ## Review the code
 
-You can review the following files: `src/test/java/com/microsoft/azure/cosmosdb/cassandra/util/CassandraUtils.java` and `src/test/java/com/microsoft/azure/cosmosdb/cassandra/repository/UserRepository.java` to understand how sessions and the retry policy is being added. You should also review the main class file  `src/test/java/com/microsoft/azure/cosmosdb/cassandra/examples/UserProfile.java` where the load test is created and run. We first create the retry policy in UserProfile.java:
+You can review the following files: `src/test/java/com/microsoft/azure/cosmosdb/cassandra/util/CassandraUtils.java` and `src/test/java/com/microsoft/azure/cosmosdb/cassandra/repository/UserRepository.java` to understand how sessions and the retry and load balancing policies are being added. You should also review the main class file  `src/test/java/com/microsoft/azure/cosmosdb/cassandra/examples/UserProfile.java` where the load test is created and run. We first create the retry policy in UserProfile.java:
 
 ```java
     CosmosRetryPolicy retryPolicy = new CosmosRetryPolicy(MAX_RETRY_COUNT, FIXED_BACK_OFF_TIME, GROWING_BACK_OFF_TIME);
 ```
+We then create two load balancing policies. One with a global endpoint, and one with a specified region:
 
-We can then pass the policy to `getSession()` (see `CassandraUtils.java`):
+```java
+    CosmosLoadBalancingPolicy loadBalancingPolicy1 = CosmosLoadBalancingPolicy.builder().withGlobalEndpoint(CONTACT_POINTS[0]).build();
+    CosmosLoadBalancingPolicy loadBalancingPolicy2 = CosmosLoadBalancingPolicy.builder().withWriteDC("West US").withReadDC("West US").build();
+```
+
+We can then pass the policies to `getSession()` (see `CassandraUtils.java` - in this case we create two sessions in order to toggle between running our load test while load balancing across regions, or a single region - but typically you will create 1 session):
 
 ```java
     CassandraUtils utils = new CassandraUtils();
     UserProfile u = new UserProfile();
-    Session cassandraSessionWithRetry = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy);
+    Session cassandraSessionWithRetry1 = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy, u.loadBalancingPolicy1);
+    Session cassandraSessionWithRetry2 = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy, u.loadBalancingPolicy2);
 ```
 
 Please note that timeout limits are set in `getSession()`:

@@ -69,7 +69,7 @@ The retry policy handles errors such as OverLoadedError (which may occur due to 
     ```java
     Boolean loadBalanceRegions = true;
     ```
-    Note: when running this, you should ensure that you have two regions, one in West US (or you can change the above to a region of your choice), and [multi-master writes configured](https://docs.microsoft.com/en-us/azure/cosmos-db/how-to-multi-master). When you run the test again with load balancing configured, you should see requests being written to different regions, with latencies reduced:
+    Note: when running this, you should ensure that you have two regions, one in West US (or you can change the above to a region of your choice), and [multi-master writes configured](https://docs.microsoft.com/en-us/azure/cosmos-db/how-to-multi-master). When you run the test again with load balancing configured, you should see requests being written to different regions, with latencies reduced, without having to increase provisioned throughput (RUs):
 
     ![Console output](./media/loadbalancingoutput.png)
 

@@ -1,6 +1,7 @@
 package com.microsoft.azure.cosmosdb.cassandra.util;
 
 import com.datastax.driver.core.*;
+import com.microsoft.azure.cosmos.cassandra.CosmosLoadBalancingPolicy;
 import com.microsoft.azure.cosmos.cassandra.CosmosRetryPolicy;
 
 import javax.net.ssl.*;
@@ -41,7 +42,7 @@ public class CassandraUtils {
      * @throws KeyManagementException
      */
 
-    public Session getSession(String[] contactPoints, int port, CosmosRetryPolicy retryPolicy)
+    public Session getSession(String[] contactPoints, int port, CosmosRetryPolicy retryPolicy, CosmosLoadBalancingPolicy loadBalancingPolicy)
             throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException,
             UnrecoverableKeyException, KeyManagementException {
 
@@ -73,11 +74,12 @@ public class CassandraUtils {
                 .build();
 
         SocketOptions options = new SocketOptions();
-        options.setConnectTimeoutMillis(30000);
-        options.setReadTimeoutMillis(30000);
+        options.setConnectTimeoutMillis(60000);
+        options.setReadTimeoutMillis(60000);
         cluster = Cluster.builder().addContactPoints(contactPoints).withPort(port)
                                     .withCredentials(cassandraUsername, cassandraPassword)
-                                    .withRetryPolicy(retryPolicy)
+                                    .withRetryPolicy(retryPolicy)                                    
+                                    .withLoadBalancingPolicy(loadBalancingPolicy)
                                     .withSSL(sslOptions)
                                     .withSocketOptions(options)
                                     .build();

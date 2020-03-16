@@ -38,10 +38,10 @@
             <version>1.7.5</version>
         </dependency>
         <dependency>
-            <groupId>com.github.Azure</groupId>
+            <groupId>com.microsoft.azure</groupId>
             <artifactId>azure-cosmos-cassandra-extensions</artifactId>
-            <version>release-0.10.0</version>
-        </dependency>
+            <version>0.11.0</version>
+        </dependency>       
         <dependency>
             <artifactId>cassandra-driver-core</artifactId>
             <groupId>com.datastax.cassandra</groupId>

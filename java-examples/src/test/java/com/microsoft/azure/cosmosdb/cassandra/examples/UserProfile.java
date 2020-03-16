@@ -44,7 +44,7 @@ public class UserProfile {
     AtomicLong insertCount = new AtomicLong(0);
     AtomicLong totalLatency = new AtomicLong(0);
     AtomicLong averageLatency = new AtomicLong(0);
-    Boolean loadBalanceRegions = true;
+    Boolean loadBalanceRegions = false;
 
     private static int PORT;
     static {

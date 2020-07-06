@@ -77,6 +77,23 @@ The retry policy handles errors such as OverLoadedError (which may occur due to 
     
     Also bear in mind that when writing data to Cassandra, you should ensure that you account for [query idempotence](https://docs.datastax.com/en/developer/java-driver/3.0/manual/idempotence/), and the relevant rules for [retries](https://docs.datastax.com/en/developer/java-driver/3.0/manual/retries/#retries-and-idempotence). You should always perform sufficient load testing to ensure that the implementation meets your requirements.
 
+
+## Failover scenarios
+
+The Cosmos Load Balancing Policy implemented in this sample (see also step 7 above, and [Cosmos Cassandra Extensions](https://github.com/Azure/azure-cosmos-cassandra-extensions)) includes a feature that allows you to specify a read DC and write DC for application level load balancing. Specifying these options will route read and write requests to their corresponding data centers as the preferred option in either case.
+
+If readDC is specified, the policy prioritizes nodes in the read DC for read requests. Either one of writeDC or globalEndpoint needs to be specified in order to determine the data center for write requests. If writeDC is specified, writes will be prioritized for that region.
+
+When globalEndpoint is specified, the write requests will be prioritized for the default write region. Specifying the globalEndpoint allows the client to gracefully failover from a write DC failure by changing the default write region address. You can also pass dnsExpirationInSeconds, which is will be the max duration allowed to recover from the failover. By default, this is set at 60 seconds.
+
+```java
+    // specifying a global endpoint for graceful application level failover to a different write region in the event of write DC failure
+    CosmosLoadBalancingPolicy loadBalancingPolicy1 = CosmosLoadBalancingPolicy.builder().withGlobalEndpoint(CONTACT_POINTS[0]).withReadDC("UK West").withDnsExpirationInSeconds(120).build();
+
+    //specifying an explicit write DC
+    CosmosLoadBalancingPolicy loadBalancingPolicy2 = CosmosLoadBalancingPolicy.builder().withWriteDC("UK West").withReadDC("UK West").withDnsExpirationInSeconds(120).build();
+```
+
 ## About the code
 The code included in this sample is a load test to simulate a scenario where Cosmos DB will rate limit requests (return a 429 error) because there are too many requests for the [provisioned throughput](https://docs.microsoft.com/azure/cosmos-db/how-to-provision-container-throughput) in the service. In this sample, we create a Keyspace and table, and run a multi-threaded process that will insert users concurrently into the user table. To help generate random data for users, we use a java library called "javafaker", which is included in the build dependencies. The loadTest() will eventually exhaust the provisioned Keyspace RU allocation (default is 400RUs). 
 

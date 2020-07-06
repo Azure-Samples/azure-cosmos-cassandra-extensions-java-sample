@@ -80,7 +80,9 @@ The retry policy handles errors such as OverLoadedError (which may occur due to 
 
 ## Failover scenarios
 
-The Cosmos Load Balancing Policy implemented in this sample (see also [Cosmos Cassandra Extensions](https://github.com/Azure/azure-cosmos-cassandra-extensions)) includes a feature that allows you to specify a read DC and write DC for application level load balancing. Specifying these options will route read and write requests to their corresponding data centers as the preferred option in either case. If readDC is specified, the policy prioritizes nodes in the read DC for read requests. Either one of writeDC or globalEndpoint needs to be specified in order to determine the data center for write requests. If writeDC is specified, writes will be prioritized for that region.
+The Cosmos Load Balancing Policy implemented in this sample (see also [Cosmos Cassandra Extensions](https://github.com/Azure/azure-cosmos-cassandra-extensions)) includes a feature that allows you to specify a read DC and write DC for application level load balancing. Specifying these options will route read and write requests to their corresponding data centers as the preferred option in either case. 
+
+If readDC is specified, the policy prioritizes nodes in the read DC for read requests. Either one of writeDC or globalEndpoint needs to be specified in order to determine the data center for write requests. If writeDC is specified, writes will be prioritized for that region.
 
 When globalEndpoint is specified, the write requests will be prioritized for the default write region. Specifying the globalEndpoint allows the client to gracefully failover from a write DC failure by changing the default write region address. You can also pass dnsExpirationInSeconds, which is will be the max duration allowed to recover from the failover. By default, this is set at 60 seconds.
 

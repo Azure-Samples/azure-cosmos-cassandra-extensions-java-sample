@@ -21,8 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Example class which will demonstrate handling rate limiting using retry policy, and client side 
- * load balancing using Cosmos DB Extensions for Java
+ * Example class which will demonstrate handling rate limiting using retry
+ * policy, and client side load balancing using Cosmos DB Extensions for Java
  */
 public class UserProfile {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserProfile.class);
@@ -33,10 +33,13 @@ public class UserProfile {
     private static final int MAX_RETRY_COUNT = 20;
     public static final int NUMBER_OF_THREADS = 40;
     public static final int NUMBER_OF_WRITES_PER_THREAD = 5;
-    CosmosRetryPolicy retryPolicy = new CosmosRetryPolicy(MAX_RETRY_COUNT, FIXED_BACK_OFF_TIME, GROWING_BACK_OFF_TIME);
-    
-    CosmosLoadBalancingPolicy loadBalancingPolicy1 = CosmosLoadBalancingPolicy.builder().withGlobalEndpoint(CONTACT_POINTS[0]).build();
-    CosmosLoadBalancingPolicy loadBalancingPolicy2 = CosmosLoadBalancingPolicy.builder().withWriteDC("West US").withReadDC("West US").build();
+    CosmosRetryPolicy retryPolicy = CosmosRetryPolicy.builder().withFixedBackOffTimeInMillis(FIXED_BACK_OFF_TIME)
+            .withGrowingBackOffTimeInMillis(GROWING_BACK_OFF_TIME).withMaxRetryCount(MAX_RETRY_COUNT).build();
+
+    CosmosLoadBalancingPolicy loadBalancingPolicy1 = CosmosLoadBalancingPolicy.builder()
+            .withGlobalEndpoint(CONTACT_POINTS[0]).build();
+    CosmosLoadBalancingPolicy loadBalancingPolicy2 = CosmosLoadBalancingPolicy.builder().withWriteDC("West US")
+            .withReadDC("West US").build();
     AtomicInteger recordcount = new AtomicInteger(0);
     AtomicInteger exceptioncount = new AtomicInteger(0);
     AtomicInteger ratelimitcount = new AtomicInteger(0);
@@ -72,12 +75,14 @@ public class UserProfile {
 
         CassandraUtils utils = new CassandraUtils();
         UserProfile u = new UserProfile();
-        Session cassandraSessionWithRetry1 = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy, u.loadBalancingPolicy1);
-        Session cassandraSessionWithRetry2 = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy, u.loadBalancingPolicy2);
+        Session cassandraSessionWithRetry1 = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy,
+                u.loadBalancingPolicy1);
+        Session cassandraSessionWithRetry2 = utils.getSession(CONTACT_POINTS, PORT, u.retryPolicy,
+                u.loadBalancingPolicy2);
         UserRepository region1 = new UserRepository(cassandraSessionWithRetry1);
         UserRepository region2 = new UserRepository(cassandraSessionWithRetry2);
         try {
-            //Create keyspace and table in cassandra database
+            // Create keyspace and table in cassandra database
             region1.deleteTable("DROP KEYSPACE IF EXISTS uprofile");
             Thread.sleep(5000);
             region1.createKeyspace(
@@ -88,8 +93,9 @@ public class UserProfile {
             Thread.sleep(5000);
             LOGGER.info("inserting records....");
             // Insert rows into user table
-            u.loadTest(region1, region2, u, "INSERT INTO  uprofile.user (user_id, user_name , user_bcity) VALUES (?,?,?)",
-                    NUMBER_OF_THREADS, NUMBER_OF_WRITES_PER_THREAD, 5);
+            u.loadTest(region1, region2, u,
+                    "INSERT INTO  uprofile.user (user_id, user_name , user_bcity) VALUES (?,?,?)", NUMBER_OF_THREADS,
+                    NUMBER_OF_WRITES_PER_THREAD, 5);
         } catch (Exception e) {
             System.out.println("Exception " + e);
         } finally {
@@ -103,15 +109,15 @@ public class UserProfile {
         return random;
     }
 
-    public void loadTest(UserRepository region1, UserRepository region2, UserProfile u, String preparedStatementString, int noOfThreads,
-            int noOfWritesPerThread, int noOfRetries) throws InterruptedException {
+    public void loadTest(UserRepository region1, UserRepository region2, UserProfile u, String preparedStatementString,
+            int noOfThreads, int noOfWritesPerThread, int noOfRetries) throws InterruptedException {
         PreparedStatement preparedStatement1 = region1.prepareInsertStatement(preparedStatementString);
         PreparedStatement preparedStatement2 = region2.prepareInsertStatement(preparedStatementString);
         preparedStatement1.setIdempotent(true);
         preparedStatement2.setIdempotent(true);
         Faker faker = new Faker();
         ExecutorService es = Executors.newCachedThreadPool();
-        
+
         for (int i = 1; i <= noOfThreads; i++) {
             Runnable task = () -> {
                 ;
@@ -125,26 +131,25 @@ public class UserProfile {
                         u.recordcount.incrementAndGet();
                         long startTime = System.currentTimeMillis();
 
-                        //load balancing across regions
-                        if (loadBalanceRegions == true){
+                        // load balancing across regions
+                        if (loadBalanceRegions == true) {
                             // approx 50% of the time we will go to region 1
-                            if (n == 1){
+                            if (n == 1) {
                                 System.out.print("writing to region 1! \n");
-                                region1.insertUser(preparedStatement1, guid.toString(), name, city); 
+                                region1.insertUser(preparedStatement1, guid.toString(), name, city);
                             }
                             // approx 50% of the time we will go to region 2
-                            else{
+                            else {
                                 System.out.print("writing to region 2! \n");
                                 region2.insertUser(preparedStatement2, guid.toString(), name, city);
-                            }                            
-                        }
-                        else{                          
+                            }
+                        } else {
                             region1.insertUser(preparedStatement1, guid.toString(), name, city);
                         }
                         long endTime = System.currentTimeMillis();
-                        long duration = (endTime - startTime); 
-                        System.out.print("insert duration time millis: "+duration+"\n");
-                        totalLatency.getAndAdd(duration);                                                 
+                        long duration = (endTime - startTime);
+                        System.out.print("insert duration time millis: " + duration + "\n");
+                        totalLatency.getAndAdd(duration);
                         u.insertCount.incrementAndGet();
                     } catch (Exception e) {
                         u.exceptioncount.incrementAndGet();
@@ -157,8 +162,8 @@ public class UserProfile {
         es.shutdown();
         boolean finished = es.awaitTermination(5, TimeUnit.MINUTES);
         if (finished) {
-            long latency =  (totalLatency.get() / insertCount.get());
-            System.out.print("Average Latency: "+latency+"\n");
+            long latency = (totalLatency.get() / insertCount.get());
+            System.out.print("Average Latency: " + latency + "\n");
             System.out.println("Finished executing all threads.");
         }
 

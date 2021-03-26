@@ -5,7 +5,7 @@ languages:
 products:
 - azure
 description: "Azure Cosmos DB is a globally distributed multi-model database. One of the supported APIs is the Cassandra API"
-urlFragment: azure-cosmos-db-cassandra-java-retry-sample
+urlFragment: azure-cosmos-cassandra-extensions-java-sample
 ---
 
 # Handling rate limited requests in the Azure Cosmos DB API for Cassandra

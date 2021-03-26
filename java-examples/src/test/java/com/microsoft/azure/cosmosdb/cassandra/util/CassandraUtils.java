@@ -124,7 +124,7 @@ public class CassandraUtils {
             if (javaHomeDirectory == null || javaHomeDirectory.isEmpty()) {
                 throw new Exception("JAVA_HOME not set");
             }
-            ssl_keystore_file_path = new StringBuilder(javaHomeDirectory).append("/lib/security/cacerts").toString();
+            ssl_keystore_file_path = new StringBuilder(javaHomeDirectory).append("/jre/lib/security/cacerts").toString();
         }
 
         sslKeyStorePassword = (ssl_keystore_password != null && !ssl_keystore_password.isEmpty()) ?
